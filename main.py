@@ -30,10 +30,18 @@ def format_sql(raw_sql):
             sql = pattern.sub(kw, sql)
         return sql
 
-    def to_pascal_case(word):
-        if not word:
-            return word
-        return ''.join(part.capitalize() for part in re.split(r'[_\s]', word))
+    def pascal_case_fields(fields_str):
+        parts = [f.strip() for f in fields_str.split(",") if f.strip()]
+        cleaned = []
+        for part in parts:
+            # Skip if function, wildcard, or alias present
+            if "(" in part or "*" in part or " as " in part.lower():
+                cleaned.append(part)
+            else:
+                words = part.split()
+                pascal_cased = ' '.join(to_pascal_case(w) for w in words)
+                cleaned.append(pascal_cased)
+        return cleaned
 
     def pascal_case_fields(fields_str):
         parts = [f.strip() for f in fields_str.split(",")]
