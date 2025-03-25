@@ -41,8 +41,8 @@ def format_sql(raw_sql):
     formatted = re.sub(r"\)\s*,\s*(\w+\s+as)\s*\(", r")\n\n, \1\n(", formatted)
 
     # Clean parentheses spacing
-    formatted = re.sub(r"\\(\\s*", "(", formatted)
-    formatted = re.sub(r"\\s*\\)", ")", formatted)
+    formatted = re.sub(r"\(\s*", "(", formatted)
+    formatted = re.sub(r"\s*\)", ")", formatted)
 
     return formatted
 
