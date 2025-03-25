@@ -43,18 +43,12 @@ def format_sql(raw_sql):
                 cleaned.append(pascal_cased)
         return cleaned
 
-    def pascal_case_fields(fields_str):
-        parts = [f.strip() for f in fields_str.split(",")]
-        cleaned = []
-        for part in parts:
-            # Avoid touching functions or wildcards
-            if "(" in part or "*" in part or " as " in part.lower():
-                cleaned.append(part)
-            else:
-                words = part.split()
-                pascal_cased = ' '.join(to_pascal_case(w) for w in words)
-                cleaned.append(pascal_cased)
-        return cleaned
+    def to_pascal_case(word):
+        if not word or not re.search(r'[a-zA-Z]', word):
+            return word  # leave symbols, numbers, or empty strings untouched
+        parts = re.split(r'[^a-zA-Z0-9]', word)
+        return ''.join(part.capitalize() for part in parts if part)
+
 
     raw_sql = raw_sql.strip()
     raw_sql = lowercase_keywords(raw_sql)
