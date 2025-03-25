@@ -38,7 +38,7 @@ def format_sql(raw_sql):
     formatted = re.sub(r"(.*?)--(.*)", r"--\2\n\1", formatted)
 
     # Ensure blank lines between CTEs
-    formatted = re.sub(r"\\)\\s*,\\s*(\\w+\\s+as)\\s*\\(", r")\n\n, \1\n(", formatted)
+    formatted = re.sub(r"\)\s*,\s*(\w+\s+as)\s*\(", r")\n\n, \1\n(", formatted)
 
     # Clean parentheses spacing
     formatted = re.sub(r"\\(\\s*", "(", formatted)
