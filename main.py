@@ -24,25 +24,33 @@ SQL_KEYWORDS = [
 ]
 
 def format_sql(raw_sql):
+    # Normalize all SQL keywords to lowercase
+    def lowercase_keywords(sql):
+        for kw in sorted(SQL_KEYWORDS, key=len, reverse=True):  # longer keywords first
+            pattern = re.compile(rf"\b{kw}\b", re.IGNORECASE)
+            sql = pattern.sub(kw, sql)
+        return sql
+
     formatted = raw_sql
+    formatted = lowercase_keywords(formatted)
 
-    # Lowercase all SQL keywords
-    for keyword in SQL_KEYWORDS:
-        pattern = re.compile(rf"\\b{keyword}\\b", re.IGNORECASE)
-        formatted = pattern.sub(keyword, formatted)
+    # Move commas to start of line (for SELECT-like fields)
+    lines = formatted.split('\n')
+    new_lines = []
+    for line in lines:
+        if ',' in line and not line.strip().startswith(','):
+            parts = [p.strip() for p in line.split(',')]
+            new_line = '\n'.join([f"  , {p}" if i > 0 else f"  {p}" for i, p in enumerate(parts)])
+            new_lines.append(new_line)
+        else:
+            new_lines.append(f"  {line.strip()}")
+    formatted = '\n'.join(new_lines)
 
-    # Comma-first style (simplified for now)
-    formatted = re.sub(r",\\s*([a-zA-Z_])", r"\n  , \1", formatted)
-
-    # Inline comments → move to above line
-    formatted = re.sub(r"(.*?)--(.*)", r"--\2\n\1", formatted)
-
-    # Ensure blank lines between CTEs
-    formatted = re.sub(r"\)\s*,\s*(\w+\s+as)\s*\(", r")\n\n, \1\n(", formatted)
-
-    # Clean parentheses spacing
-    formatted = re.sub(r"\(\s*", "(", formatted)
-    formatted = re.sub(r"\s*\)", ")", formatted)
+    # Indent SELECT block (simple demo version)
+    formatted = re.sub(r"(?i)\bselect\b", "select", formatted)
+    formatted = re.sub(r"(?i)\bfrom\b", "\nfrom", formatted)
+    formatted = re.sub(r"(?i)\bwhere\b", "\nwhere", formatted)
+    formatted = re.sub(r"(?i)\border by\b", "\norder by", formatted)
 
     return formatted
 
