@@ -24,33 +24,60 @@ SQL_KEYWORDS = [
 ]
 
 def format_sql(raw_sql):
-    # Normalize all SQL keywords to lowercase
     def lowercase_keywords(sql):
-        for kw in sorted(SQL_KEYWORDS, key=len, reverse=True):  # longer keywords first
+        for kw in sorted(SQL_KEYWORDS, key=len, reverse=True):
             pattern = re.compile(rf"\b{kw}\b", re.IGNORECASE)
             sql = pattern.sub(kw, sql)
         return sql
 
-    formatted = raw_sql
-    formatted = lowercase_keywords(formatted)
+    def to_pascal_case(word):
+        if not word:
+            return word
+        return ''.join(part.capitalize() for part in re.split(r'[_\s]', word))
 
-    # Move commas to start of line (for SELECT-like fields)
-    lines = formatted.split('\n')
-    new_lines = []
-    for line in lines:
-        if ',' in line and not line.strip().startswith(','):
-            parts = [p.strip() for p in line.split(',')]
-            new_line = '\n'.join([f"  , {p}" if i > 0 else f"  {p}" for i, p in enumerate(parts)])
-            new_lines.append(new_line)
-        else:
-            new_lines.append(f"  {line.strip()}")
-    formatted = '\n'.join(new_lines)
+    def pascal_case_fields(fields_str):
+        parts = [f.strip() for f in fields_str.split(",")]
+        cleaned = []
+        for part in parts:
+            # Avoid touching functions or wildcards
+            if "(" in part or "*" in part or " as " in part.lower():
+                cleaned.append(part)
+            else:
+                words = part.split()
+                pascal_cased = ' '.join(to_pascal_case(w) for w in words)
+                cleaned.append(pascal_cased)
+        return cleaned
 
-    # Indent SELECT block (simple demo version)
-    formatted = re.sub(r"(?i)\bselect\b", "select", formatted)
-    formatted = re.sub(r"(?i)\bfrom\b", "\nfrom", formatted)
-    formatted = re.sub(r"(?i)\bwhere\b", "\nwhere", formatted)
-    formatted = re.sub(r"(?i)\border by\b", "\norder by", formatted)
+    raw_sql = raw_sql.strip()
+    raw_sql = lowercase_keywords(raw_sql)
+
+    select_match = re.search(r"select(.*?)from", raw_sql, re.IGNORECASE | re.DOTALL)
+    from_match = re.search(r"from\s+([^\s;]+)", raw_sql, re.IGNORECASE)
+
+    select_part = select_match.group(1).strip() if select_match else ""
+    formatted_select_fields = pascal_case_fields(select_part)
+    formatted_select = "select\n  " + "\n  , ".join(formatted_select_fields)
+
+    # PascalCase the table name in FROM
+    from_clause = ""
+    if from_match:
+        table_name = from_match.group(1).strip()
+        from_clause = f"\nfrom {to_pascal_case(table_name)}"
+
+    # Add WHERE and ORDER BY if present
+    where_match = re.search(r"where(.*?)(group by|order by|$)", raw_sql, re.IGNORECASE | re.DOTALL)
+    order_by_match = re.search(r"order by(.*)", raw_sql, re.IGNORECASE | re.DOTALL)
+
+    where_part = where_match.group(1).strip() if where_match else ""
+    order_by_part = order_by_match.group(1).strip() if order_by_match else ""
+
+    formatted = formatted_select
+    if from_clause:
+        formatted += from_clause
+    if where_part:
+        formatted += f"\nwhere {where_part}"
+    if order_by_part:
+        formatted += f"\norder by {order_by_part}"
 
     return formatted
 
