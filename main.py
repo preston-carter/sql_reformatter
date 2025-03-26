@@ -32,15 +32,15 @@ def format_sql(raw_sql):
 
    def to_pascal_case(word):
        if not word or not re.search(r'[a-zA-Z]', word):
-           return word
+       return word
 
-        # First, normalize everything to lowercase
-        word = word.strip().lower()
+       # First, normalize everything to lowercase
+       word = word.strip().lower()
     
-        # Split based on underscores or camelCase boundaries
-        parts = re.split(r'[_\s]+', word) if '_' in word else re.findall(r'[a-z]+|\d+', word)
+       # Split based on underscores or camelCase boundaries
+       parts = re.split(r'[_\s]+', word) if '_' in word else re.findall(r'[a-z]+|\d+', word)
     
-        return ''.join(part.capitalize() for part in parts if part)
+       return ''.join(part.capitalize() for part in parts if part)
 
     raw_sql = raw_sql.strip()
     raw_sql = lowercase_keywords(raw_sql)
