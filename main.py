@@ -32,8 +32,8 @@ def format_sql(raw_sql):
 
     def to_pascal_case(word):
         if not word or not re.search(r'[a-zA-Z]', word):
-        return word
-
+            return word
+    
         # First, normalize everything to lowercase
         word = word.strip().lower()
     
