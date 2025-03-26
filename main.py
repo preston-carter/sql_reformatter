@@ -65,7 +65,11 @@ def format_sql(raw_sql):
     from_clause = ""
     if from_match:
         table_name = from_match.group(1).strip()
-        from_clause = f"\nfrom {to_pascal_case(table_name)}"
+        if table_name:
+            try:
+                from_clause = f"\nfrom {to_pascal_case(table_name)}"
+            except:
+                from_clause = f"\nfrom {table_name}"  # fallback if parsing fails
 
     # Add WHERE and ORDER BY if present
     where_match = re.search(r"where(.*?)(group by|order by|$)", raw_sql, re.IGNORECASE | re.DOTALL)
