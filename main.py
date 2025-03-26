@@ -30,63 +30,58 @@ def format_sql(raw_sql):
             sql = pattern.sub(kw, sql)
         return sql
 
+    def to_pascal_case(word):
+        if not word or not re.search(r'[a-zA-Z]', word):
+            return word
+        word = word.strip().lower()
+        parts = re.split(r'[_\s]+', word) if '_' in word else re.findall(r'[a-z]+|\d+', word)
+        return ''.join(part.capitalize() for part in parts if part)
+
     def pascal_case_fields(fields_str):
-        # Handle empty or weird input
         if not fields_str.strip():
             return []
-    
         parts = [f.strip() for f in fields_str.split(",") if f.strip()]
         cleaned = []
-    
         for part in parts:
-            try:
-                # Skip function calls, wildcards, and aliases
-                if "(" in part or "*" in part or " as " in part.lower():
-                    cleaned.append(part)
-                else:
-                    words = part.split()
-                    pascal_cased = ' '.join(to_pascal_case(w) for w in words)
-                    cleaned.append(pascal_cased)
-            except Exception as e:
-                cleaned.append(part)  # Fallback to original on any issue
+            if "(" in part or "*" in part or " as " in part.lower():
+                cleaned.append(part)
+            else:
+                pascal_cased = to_pascal_case(part)
+                cleaned.append(pascal_cased)
         return cleaned
 
     raw_sql = raw_sql.strip()
     raw_sql = lowercase_keywords(raw_sql)
 
-    select_match = re.search(r"select(.*?)from", raw_sql, re.IGNORECASE | re.DOTALL)
-    from_match = re.search(r"from\s+([^\s;]+)", raw_sql, re.IGNORECASE)
-
+    # --- Extract select ---
+    select_match = re.search(r"select\s+(.*?)\s+from\s", raw_sql, re.IGNORECASE | re.DOTALL)
     select_part = select_match.group(1).strip() if select_match else ""
-    formatted_select_fields = pascal_case_fields(select_part)
-    formatted_select = "select\n  " + "\n  , ".join(formatted_select_fields)
+    select_fields = pascal_case_fields(select_part)
+    formatted_select = "select\n  " + "\n  , ".join(select_fields) if select_fields else "select"
 
-    # PascalCase the table name in FROM
+    # --- Extract from ---
+    from_match = re.search(r"from\s+([^\s\(\);]+)", raw_sql, re.IGNORECASE)
     from_clause = ""
     if from_match:
         table_name = from_match.group(1).strip()
-        if table_name:
-            try:
-                from_clause = f"\nfrom {to_pascal_case(table_name)}"
-            except:
-                from_clause = f"\nfrom {table_name}"  # fallback if parsing fails
+        if re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name):
+            table_name = to_pascal_case(table_name)
+        from_clause = f"\nfrom {table_name}"
 
-    # Add WHERE and ORDER BY if present
-    where_match = re.search(r"where(.*?)(group by|order by|$)", raw_sql, re.IGNORECASE | re.DOTALL)
-    order_by_match = re.search(r"order by(.*)", raw_sql, re.IGNORECASE | re.DOTALL)
+    # --- Extract where ---
+    where_match = re.search(r"where\s+(.*?)(order by|group by|$)", raw_sql, re.IGNORECASE | re.DOTALL)
+    where_clause = ""
+    if where_match:
+        where_content = where_match.group(1).strip()
+        where_clause = f"\nwhere {where_content}"
 
-    where_part = where_match.group(1).strip() if where_match else ""
-    order_by_part = order_by_match.group(1).strip() if order_by_match else ""
+    # --- Extract order by ---
+    order_by_match = re.search(r"order by\s+(.*)", raw_sql, re.IGNORECASE)
+    order_by_clause = ""
+    if order_by_match:
+        order_by_clause = f"\norder by {order_by_match.group(1).strip()}"
 
-    formatted = formatted_select
-    if from_clause:
-        formatted += from_clause
-    if where_part:
-        formatted += f"\nwhere {where_part}"
-    if order_by_part:
-        formatted += f"\norder by {order_by_part}"
-
-    return formatted
+    return formatted_select + from_clause + where_clause + order_by_clause
 
 if format_button and sql_input:
     formatted_sql = format_sql(sql_input)
